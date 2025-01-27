@@ -21,7 +21,8 @@ uint16_t approximateKelvinFromRGB(uint32_t rgb);
 
 #define NUM_ICS_WS2812_2CH_3X(len) (((len)+1)*2/3) // 2 WS2811 ICs control 3 zones (each zone has 2 LEDs, CW and WW)
 #define IC_INDEX_WS2812_2CH_3X(i)  ((i)*2/3)
-#define WS2812_2CH_3X_SPANS_2_ICS(i) ((i)&0x01)    // every other LED zone is on two different ICs
+#define WS2812_2CH_3X_SPANS_2_ICS(i) ((i)%3==1) // every third LED zone is on two different ICs, starting from the second
+
 
 struct BusConfig; // forward declaration
 
@@ -111,7 +112,7 @@ class Bus {
     inline  void     setStart(uint16_t start)                  { _start = start; }
     inline  void     setAutoWhiteMode(uint8_t m)               { if (m < 5) _autoWhiteMode = m; }
     inline  uint8_t  getAutoWhiteMode() const                  { return _autoWhiteMode; }
-    inline  uint32_t getNumberOfChannels() const               { return hasWhite() + 3*hasRGB() + hasCCT(); }
+    inline  uint32_t getNumberOfChannels() const               { return 2; } // TODO while faking rgb - force correct number of channels
     inline  uint16_t getStart() const                          { return _start; }
     inline  uint8_t  getType() const                           { return _type; }
     inline  bool     isOk() const                              { return _valid; }
@@ -121,23 +122,10 @@ class Bus {
 
     static inline std::vector<LEDType> getLEDTypes()           { return {{TYPE_NONE, "", PSTR("None")}}; } // not used. just for reference for derived classes
     static constexpr uint32_t getNumberOfPins(uint8_t type)     { return isVirtual(type) ? 4 : isPWM(type) ? numPWMPins(type) : is2Pin(type) + 1; } // credit @PaoloTK
-    static constexpr uint32_t getNumberOfChannels(uint8_t type) { return hasWhite(type) + 3*hasRGB(type) + hasCCT(type); }
-    static constexpr bool hasRGB(uint8_t type) {
-      return !((type >= TYPE_WS2812_1CH && type <= TYPE_WS2812_WWA) || type == TYPE_ANALOG_1CH || type == TYPE_ANALOG_2CH || type == TYPE_ONOFF);
-    }
-    static constexpr bool hasWhite(uint8_t type) {
-      return  (type >= TYPE_WS2812_1CH && type <= TYPE_WS2812_WWA) ||
-              type == TYPE_SK6812_RGBW || type == TYPE_TM1814 || type == TYPE_UCS8904 ||
-              type == TYPE_FW1906 || type == TYPE_WS2805 || type == TYPE_SM16825 ||        // digital types with white channel
-              (type > TYPE_ONOFF && type <= TYPE_ANALOG_5CH && type != TYPE_ANALOG_3CH) || // analog types with white channel
-              type == TYPE_NET_DDP_RGBW || type == TYPE_NET_ARTNET_RGBW;                   // network types with white channel
-    }
-    static constexpr bool hasCCT(uint8_t type) {
-      return  type == TYPE_WS2812_2CH_X3 || type == TYPE_WS2812_WWA ||
-              type == TYPE_ANALOG_2CH    || type == TYPE_ANALOG_5CH ||
-              type == TYPE_FW1906        || type == TYPE_WS2805     ||
-              type == TYPE_SM16825;
-    }
+    static constexpr uint32_t getNumberOfChannels(uint8_t type) { return 2; } // TODO while faking rgb - force correct number of channels
+    static constexpr bool hasRGB(uint8_t type) { return true; } // TODO while faking rgb - force hasRGB
+    static constexpr bool hasWhite(uint8_t type) { return false; } // TODO while faking rgb - force hasWhite
+    static constexpr bool hasCCT(uint8_t type) { return false; } // TODO while faking rgb - force hasCCT
     static constexpr bool  isTypeValid(uint8_t type)  { return (type > 15 && type < 128); }
     static constexpr bool  isDigital(uint8_t type)    { return (type >= TYPE_DIGITAL_MIN && type <= TYPE_DIGITAL_MAX) || is2Pin(type); }
     static constexpr bool  is2Pin(uint8_t type)       { return (type >= TYPE_2PIN_MIN && type <= TYPE_2PIN_MAX); }
